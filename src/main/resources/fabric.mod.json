@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "musicbox_client",
+  "version": "1.0.0",
+  "name": "Music Box (Client)",
+  "description": "Play vanilla music or your own mp3/ogg/wav files. Client-side only.",
+  "environment": "client",
+  "mixins": [{ "config": "musicbox_client.mixins.json", "environment": "client" }],
+  "entrypoints": { "client": ["com.example.musicbox.MusicBoxClient"] },
+  "depends": { "fabricloader": ">=0.19.3", "minecraft": "~26.3", "java": ">=25", "fabric-api": "*" }
+}
