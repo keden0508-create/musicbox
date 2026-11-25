@@ -4,9 +4,9 @@ import javazoom.jl.decoder.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.sounds.SoundSource;
 import org.lwjgl.stb.STBVorbis;
+import org.lwjgl.stb.STBVorbisInfo;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.system.libc.LibCStdlib;
 
 import javax.sound.sampled.*;
 import java.io.*;
@@ -115,32 +115,42 @@ public final class AudioPlayer {
     private static void ogg(InputStream in, int g) throws Exception {
         byte[] data = in.readAllBytes();
         ByteBuffer buf = MemoryUtil.memAlloc(data.length);
-        buf.put(data).flip();
+        long handle = 0;
         ShortBuffer pcm = null;
-        int ch, rate;
-        try (MemoryStack st = MemoryStack.stackPush()) {
-            IntBuffer c = st.mallocInt(1), r = st.mallocInt(1);
-            pcm = STBVorbis.stb_vorbis_decode_memory(buf, c, r);
-            ch = c.get(0);
-            rate = r.get(0);
-        } finally {
-            MemoryUtil.memFree(buf);
-        }
-        if (pcm == null) throw new IOException("ogg 디코딩 실패");
-        try (Sink s = new Sink(g, rate, ch)) {
-            byte[] chunk = new byte[8192];
-            while (pcm.hasRemaining()) {
-                int n = Math.min(chunk.length / 2, pcm.remaining());
-                for (int i = 0; i < n; i++) {
-                    short v = pcm.get();
-                    chunk[2 * i] = (byte) v;
-                    chunk[2 * i + 1] = (byte) (v >> 8);
-                }
-                if (!s.write(chunk, n * 2)) return;
+        STBVorbisInfo info = null;
+        try {
+            buf.put(data).flip();
+            try (MemoryStack st = MemoryStack.stackPush()) {
+                IntBuffer err = st.mallocInt(1);
+                handle = STBVorbis.stb_vorbis_open_memory(buf, err, null);
+                if (handle == 0L) throw new IOException("ogg 열기 실패 (" + err.get(0) + ")");
             }
-            s.finish();
+            info = STBVorbisInfo.malloc();
+            STBVorbis.stb_vorbis_get_info(handle, info);
+            int ch = info.channels();
+            int rate = info.sample_rate();
+            pcm = MemoryUtil.memAllocShort(4096 * ch);
+            try (Sink s = new Sink(g, rate, ch)) {
+                byte[] chunk = new byte[4096 * ch * 2];
+                while (true) {
+                    pcm.clear();
+                    int n = STBVorbis.stb_vorbis_get_samples_short_interleaved(handle, ch, pcm);
+                    if (n <= 0) break;
+                    int total = n * ch;
+                    for (int i = 0; i < total; i++) {
+                        short v = pcm.get(i);
+                        chunk[2 * i] = (byte) v;
+                        chunk[2 * i + 1] = (byte) (v >> 8);
+                    }
+                    if (!s.write(chunk, total * 2)) return;
+                }
+                s.finish();
+            }
         } finally {
-            LibCStdlib.free(pcm);
+            if (handle != 0L) STBVorbis.stb_vorbis_close(handle);
+            if (info != null) info.free();
+            if (pcm != null) MemoryUtil.memFree(pcm);
+            MemoryUtil.memFree(buf);
         }
     }
 
