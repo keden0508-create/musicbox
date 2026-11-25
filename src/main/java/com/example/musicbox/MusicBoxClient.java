@@ -6,7 +6,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,11 +28,11 @@ public class MusicBoxClient implements ClientModInitializer {
             }
         } catch (Exception ignored) {}
         KeyMapping.Category cat = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("musicbox_client", "main"));
-        open = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.musicbox_client.open", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, cat));
+        open = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.musicbox_client.open", InputConstants.KEY_M, cat));
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (open.consumeClick()) {
                 TrackLibrary.refresh();
-                mc.setScreen(new MusicScreen());
+                Util2.openScreen(new MusicScreen());
             }
             // 내 음악 재생 중에는 바닐라 BGM이 끼어들지 않게 함
             if (AudioPlayer.isActive()) mc.getMusicManager().stopPlaying();

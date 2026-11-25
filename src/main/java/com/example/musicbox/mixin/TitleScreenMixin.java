@@ -2,6 +2,7 @@ package com.example.musicbox.mixin;
 
 import com.example.musicbox.MusicScreen;
 import com.example.musicbox.TrackLibrary;
+import com.example.musicbox.Util2;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -19,7 +20,7 @@ public abstract class TitleScreenMixin extends Screen {
     private void musicbox$addButton(CallbackInfo ci) {
         this.addRenderableWidget(Button.builder(Component.literal("♪ 음악"), b -> {
             TrackLibrary.refresh();
-            this.minecraft.setScreen(new MusicScreen(this));
+            Util2.openScreen(new MusicScreen(this));
         }).bounds(6, 6, 56, 20).build());
     }
 }
